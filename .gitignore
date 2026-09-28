@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.clasp.json
+apps-script/Index.html
+apps-script/Core.gs
+dist/
+test-results/
+*.log

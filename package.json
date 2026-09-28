@@ -1,0 +1,8 @@
+{
+  "name": "umama-ai-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LinkedIn Client Operations System — presentation MVP",
+  "scripts": {"start": "node scripts/serve.cjs", "build": "node scripts/build.cjs", "test": "node --test tests/*.test.cjs", "check": "npm test && npm run build"},
+  "engines": {"node": ">=20"}
+}
