@@ -81,4 +81,4 @@ Run the preview server first. To use installed Edge instead, set `BROWSER_CHANNE
 
 ## Release status
 
-The local demo and mocked backend are tested. **Live Google authentication, OAuth consent, Gemini calls, Sheets writes, Drive PDF generation and GitHub deployment still require owner configuration and live smoke tests.** No external site was published and no real client data was uploaded during development. Production-minded means defensive implementation and explicit validation boundaries; it does not mean zero defects or production certification.
+The presentation demo, mocked backend and private Google authentication are tested. The private Apps Script deployment and version-safe `ClientEvents` sheet are configured for the authorized administrator. **Gemini calls and Drive PDF generation still require the server-side Gemini key and live smoke tests.** No real client data was uploaded during development. Production-minded means defensive implementation and explicit validation boundaries; it does not mean zero defects or production certification.
