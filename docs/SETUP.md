@@ -55,6 +55,7 @@ The app does not change sharing permissions. Report files inherit their folder's
    | `ADMIN_EMAILS` | Exact authorized Google email; comma-separated for additional trusted admins |
    | `SPREADSHEET_ID` | ID of the private spreadsheet |
    | `REPORT_FOLDER_ID` | ID of the private report folder |
+   | `CLIENT_FOLDER_ROOT_ID` | Optional dedicated client-workspace root; falls back to `REPORT_FOLDER_ID` |
    | `GEMINI_API_KEY` | Key created in Google AI Studio for your account/project |
    | `GEMINI_MODEL` | An available Gemini model supporting `generateContent` and JSON-schema structured output; verify access in your own project |
    | `AI_DAILY_LIMIT` | Optional daily per-admin request cap; default `50`, maximum `500`, UTC reset |
