@@ -36,6 +36,11 @@ test('edits and fact changes revoke approvals without mutating prior snapshots',
 test('changing intake clears verification and increments revision',()=>{
   const old=WorkspaceSamples.samples()[0],c=change(old,'intake',data);assert.equal(c.facts.length,0);assert.equal(c.extracted,false);assert.equal(c.revision,old.revision+1);
 });
+test('workspace provisioning stores only a validated folder link',()=>{
+  const c=change(base(),'workspace',{url:'https://drive.google.com/drive/folders/mock-folder',provisionedAt:now});
+  assert.equal(c.workspace.status,'ready');assert.equal(c.workspace.url,'https://drive.google.com/drive/folders/mock-folder');
+  assert.throws(()=>change(base(),'workspace',{url:'javascript:alert(1)',provisionedAt:now}));
+});
 test('conflicting verified values and content limits block approval',()=>{
   const c=WorkspaceSamples.samples()[0];c.facts.push({...c.facts[0],id:'other',value:'A different role'});
   assert(C.quality(c,'about','Valid text').some(x=>x.includes('conflicting')));
