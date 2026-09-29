@@ -36,6 +36,11 @@ Limits are intentionally conservative for a small internal MVP: 100 clients, 2,0
   "createdAt": "2026-09-28T12:00:00.000Z",
   "updatedAt": "2026-09-28T12:00:00.000Z",
   "updatedBy": "authorized-admin-email",
+  "workspace": {
+    "url": "https://drive.google.com/drive/folders/example",
+    "provisionedAt": "2026-09-28T12:00:00.000Z",
+    "status": "ready"
+  },
   "facts": [],
   "modules": {},
   "extracted": false
@@ -89,10 +94,11 @@ Generation or manual save increments the module's version and sets `draft`. Appr
 | --- | --- |
 | Script properties | Server configuration; per-admin UTC AI request counters |
 | Drive report folder | Approved PDF named `Umama-<client-id>-revision-<revision>.pdf` |
+| Client workspace root | One deterministic client folder with five numbered workflow subfolders |
 | Demo localStorage | `umama-demo-v1`: schemaVersion, clients and immutable snapshot events |
 | Demo sessionStorage | Non-security UI convenience flag `umama-demo-open` |
 
-Drive PDF exports reuse the same file for the same client revision. Draft HTML downloads are generated from current state and are not uploaded to Drive. No email is sent, and nothing is published to LinkedIn.
+Each provisioned client has `01 Intake & Documents`, `02 Profile Drafts`, `03 Content Strategy`, `04 Feedback` and `05 Final Delivery`. Final PDFs for provisioned clients are saved in Final Delivery and reuse the same file for the same client revision. Draft HTML downloads are generated from current state and are not uploaded to Drive. No email is sent, and nothing is published to LinkedIn.
 
 ## Backup, retention and deletion
 
