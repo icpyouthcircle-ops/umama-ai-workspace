@@ -20,6 +20,8 @@ The demo includes three fictional clients. It saves edits in this browser, recog
 
 - Dashboard, client list, name search and workflow filters.
 - New-client intake, consent confirmation, raw profile notes and LinkedIn reference URL validation.
+- Guided intake fields for role, audience, offer, goal, tone, CTA, experience and proof.
+- Automatic private Drive workspace with Intake, Profile Drafts, Content Strategy, Feedback and Final Delivery folders.
 - Structured extraction, missing-information detection, source quotations, fact verification/rejection and evidence notes.
 - Profile audit, headline options, About, Experience, positioning and content pillars.
 - Generate/regenerate, edit, copy, save and approve per module.
@@ -37,7 +39,7 @@ The demo includes three fictional clients. It saves edits in this browser, recog
 | Apps Script web app | Private live workspace | Google sign-in + server allowlist; private Sheet and Drive folder |
 | Public portfolio | Separate future project | Separate repository/deployment; no client records or shared demo storage |
 
-Live UI and server communicate through `google.script.run`. The GitHub Pages login button opens the configured Apps Script URL. There is no direct cross-origin browser API connection, custom password database, public writable Sheet, shared admin password or frontend Gemini key.
+Live UI and server communicate through `google.script.run`. The GitHub Pages login button opens the configured Apps Script URL. There is no direct cross-origin browser API connection, custom password database, public writable Sheet, shared admin password or frontend Gemini key. Client folders use `CLIENT_FOLDER_ROOT_ID` when configured and otherwise use the private `REPORT_FOLDER_ID` folder.
 
 ## Project layout
 
