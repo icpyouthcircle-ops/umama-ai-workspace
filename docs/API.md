@@ -32,6 +32,7 @@ Response: `{ok:true,data:...}` or `{ok:false,error:{code,message}}`. Authenticat
 | --- | --- | --- |
 | `bootstrap` | None | clients, actor, aiConfigured |
 | `create` | requestId, data: name/raw/url/service/consent | New snapshot at revision 1 |
+| `provision` | requestId, id, expectedRevision | New snapshot with a private client-folder link |
 | `change` | requestId, id, expectedRevision, command | New snapshot |
 | `extract` | requestId, id, expectedRevision | Gemini facts, validated source quotes, all unverified |
 | `generate` | requestId, id, expectedRevision, module | Saved AI draft of selected module |
@@ -69,7 +70,7 @@ The browser cannot submit a raw extraction command through `change`. Only the ex
 5. Append one canonical row and flush.
 6. Release the lock.
 
-Model calls occur outside the lock. The commit repeats the revision check afterward, so a slow AI result cannot overwrite newer work. Report generation holds the lock to keep the approved snapshot and file generation consistent. A PDF filename is deterministic per revision, permitting reuse after a lost response.
+Model calls and Drive-folder setup occur outside the commit lock. Each commit repeats the revision check afterward, so a slow external operation cannot overwrite newer work. Client folders use a deterministic name containing the server client ID, making retries safe. Report generation holds the lock to keep the approved snapshot and file generation consistent. A PDF filename is deterministic per revision, permitting reuse after a lost response.
 
 ## Error codes
 
