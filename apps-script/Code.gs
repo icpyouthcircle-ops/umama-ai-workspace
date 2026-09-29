@@ -20,7 +20,7 @@ function api(request) {
   try {
     const actor = authorize_();
     if (!request || typeof request !== 'object' || JSON.stringify(request).length > 25000) WorkspaceCore.fail('VALIDATION','Invalid or oversized request.');
-    if (!['bootstrap','create','change','extract','generate','history','report'].includes(request.action)) WorkspaceCore.fail('VALIDATION','Unknown action.');
+    if (!['bootstrap','create','provision','change','extract','generate','history','report'].includes(request.action)) WorkspaceCore.fail('VALIDATION','Unknown action.');
     if (request.action === 'bootstrap') {
       const records = records_(); const latest = {};
       records.forEach(r=>{latest[r[1]]=parseSnapshot_(r[7]);});
@@ -49,8 +49,19 @@ function api(request) {
       const command=request.action==='extract'?extract_(initial.client):generate_(initial.client,request.module);
       return {ok:true,data:commit_(request,actor,digest,command)};
     }
+    if(request.action==='provision'){
+      const initial=locked_(()=>{
+        const rows=records_(),previous=replay_(rows,request.requestId,digest);
+        if(previous)return {replayed:previous};
+        return {client:current_(rows,request.id,request.expectedRevision)};
+      });
+      if(initial.replayed)return {ok:true,data:initial.replayed};
+      const folder=clientWorkspaceFolder_(initial.client,true);
+      const command={type:'workspace',payload:{url:folder.getUrl(),provisionedAt:new Date().toISOString()}};
+      return {ok:true,data:commit_(request,actor,digest,command)};
+    }
     if(request.action==='change' && (!request.command || !['intake','fact','module','approve'].includes(request.command.type)))WorkspaceCore.fail('VALIDATION','Invalid change type.');
-    const command=request.command?WorkspaceCore.clone(request.command):undefined;
+    let command=request.command?WorkspaceCore.clone(request.command):undefined;
     if(command && command.type==='module' && command.payload)command.payload.origin='manual';
     return {ok:true,data:commit_(request,actor,digest,command)};
   } catch(err) {
@@ -138,14 +149,29 @@ function generate_(c,key) {
   const out=gemini_(instructions[key],data,{type:'object',properties:{content:{type:'string',maxLength:6000}},required:['content'],additionalProperties:false});
   WorkspaceCore.text(out.content,6000,'Generated content');return {type:'module',payload:{module:key,content:out.content,origin:'ai'}};
 }
+function workspaceRoot_() {
+  const id=props_().getProperty('CLIENT_FOLDER_ROOT_ID')||props_().getProperty('REPORT_FOLDER_ID');
+  if(!id)WorkspaceCore.fail('CONFIG','Set CLIENT_FOLDER_ROOT_ID or REPORT_FOLDER_ID for private client folders.');
+  return DriveApp.getFolderById(id);
+}
+function safeFolderName_(name) {return String(name).replace(/[\\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim().slice(0,80)||'Client';}
+function childFolder_(parent,name,create) {
+  const found=parent.getFoldersByName(name);if(found.hasNext())return found.next();
+  if(!create)return null;return parent.createFolder(name);
+}
+function clientWorkspaceFolder_(c,create) {
+  const name='Umama - '+safeFolderName_(c.name)+' - '+c.id.slice(0,8);
+  const folder=childFolder_(workspaceRoot_(),name,create);if(!folder)WorkspaceCore.fail('NOT_FOUND','Client workspace folder was not found. Set it up again.');
+  if(create)['01 Intake & Documents','02 Profile Drafts','03 Content Strategy','04 Feedback','05 Final Delivery'].forEach(n=>childFolder_(folder,n,true));
+  return folder;
+}
 function report_(request) {
   if(typeof request.final!=='boolean')WorkspaceCore.fail('VALIDATION','Specify draft or final report.');
   return locked_(()=>{
     const c=current_(records_(),request.id,request.expectedRevision);
     const html=WorkspaceCore.report(c,request.final);
     if(!request.final)return {html};
-    const folderId=props_().getProperty('REPORT_FOLDER_ID');if(!folderId)WorkspaceCore.fail('CONFIG','Private report folder is not configured.');
-    const folder=DriveApp.getFolderById(folderId);
+    const folder=c.workspace?childFolder_(clientWorkspaceFolder_(c,true),'05 Final Delivery',true):workspaceRoot_();
     const name='Umama-'+c.id+'-revision-'+c.revision+'.pdf';
     const existing=folder.getFilesByName(name);
     const file=existing.hasNext()?existing.next():folder.createFile(Utilities.newBlob(html,'text/html','report.html').getAs(MimeType.PDF).setName(name));
