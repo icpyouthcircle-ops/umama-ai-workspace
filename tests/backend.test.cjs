@@ -4,20 +4,24 @@ function backend(){
   let active='admin@example.com',effective=active,locked=false,fetchCount=0,pdfCount=0,mode='valid',fetchHook;
   const headers=['request_id','client_id','revision','event_type','created_at','actor_email','request_hash','snapshot_json','schema_version'];rows.push(headers);
   const sheet={getLastRow:()=>rows.length,getRange:(row,col,n,w)=>({getValues:()=>rows.slice(row-1,row-1+n).map(r=>r.slice(col-1,col-1+w))}),appendRow:r=>rows.push(r)};
-  const files=new Map();
+  function makeFolder(name,id='mock-folder'){
+    const children=new Map(),files=new Map();
+    return {name,getUrl:()=>`https://drive.google.com/drive/folders/${id}`,getFoldersByName:n=>({hasNext:()=>children.has(n),next:()=>children.get(n)}),createFolder:n=>{const child=makeFolder(n,`folder-${children.size+1}`);children.set(n,child);return child;},getFilesByName:n=>({hasNext:()=>files.has(n),next:()=>files.get(n)}),createFile:blob=>{pdfCount++;const f={getUrl:()=>`https://drive.google.com/file/d/mock-${pdfCount}/view`};files.set(blob.name,f);return f;},children};
+  }
+  const rootFolder=makeFolder('root','private-folder');
   const ctx={console,Date,JSON,Math,Number,String,Set,Object,Array,Error,RegExp,
     Session:{getActiveUser:()=>({getEmail:()=>active}),getEffectiveUser:()=>({getEmail:()=>effective})},
     PropertiesService:{getScriptProperties:()=>({getProperty:k=>properties[k]||null,setProperty:(k,v)=>properties[k]=v})},
     SpreadsheetApp:{openById:()=>({getSheetByName:()=>sheet}),flush:()=>{}},
     LockService:{getScriptLock:()=>({tryLock:()=>{if(locked)return false;locked=true;return true;},releaseLock:()=>locked=false})},
     Utilities:{getUuid:()=>crypto.randomUUID(),base64EncodeWebSafe:x=>Buffer.from(x).toString('base64url'),computeDigest:(alg,s)=>crypto.createHash('sha256').update(s).digest(),DigestAlgorithm:{SHA_256:'sha256'},Charset:{UTF_8:'utf8'},newBlob:()=>({getAs:()=>({setName:name=>({name})})})},
-    MimeType:{PDF:'application/pdf'},DriveApp:{getFolderById:()=>({getFilesByName:name=>({hasNext:()=>files.has(name),next:()=>files.get(name)}),createFile:blob=>{pdfCount++;const f={getUrl:()=>`https://drive.google.com/file/d/mock-${pdfCount}/view`};files.set(blob.name,f);return f;}})},
+    MimeType:{PDF:'application/pdf'},DriveApp:{getFolderById:()=>rootFolder},
     UrlFetchApp:{fetch:(url,opts)=>{fetchCount++;assert.equal(locked,false,'Model call must not hold save lock');assert.equal(opts.headers['x-goog-api-key'],'SERVER_ONLY_SECRET');if(fetchHook)fetchHook();const payload=JSON.parse(opts.payload);assert(payload.systemInstruction);let content;if(mode==='malformed')content='not json';else if(mode==='bad-source')content=JSON.stringify({facts:[{key:'role',value:'CEO',source:'invented'}]});else content=JSON.stringify({facts:[{key:'role',value:'Designer',source:'Role: Designer'}]});return {getResponseCode:()=>mode==='provider-error'?429:200,getContentText:()=>JSON.stringify({candidates:[{finishReason:mode==='truncated'?'MAX_TOKENS':'STOP',content:{parts:[{text:content}]}}]})};}}
   };
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(require.resolve('../frontend/core.js'),'utf8'),ctx);vm.runInContext(fs.readFileSync(require.resolve('../apps-script/Code.gs'),'utf8'),ctx);
   const api=r=>JSON.parse(JSON.stringify(ctx.api(r)));
   const create=(requestId=crypto.randomUUID())=>api({action:'create',requestId,data:{name:'Test',raw:'Role: Designer',service:'Full profile',consent:true,url:''}});
-  return {api,create,rows,properties,setUser:(a,e=a)=>{active=a;effective=e;},setMode:m=>mode=m,setHook:f=>fetchHook=f,fetchCount:()=>fetchCount,pdfCount:()=>pdfCount,ctx};
+  return {api,create,rows,properties,rootFolder,setUser:(a,e=a)=>{active=a;effective=e;},setMode:m=>mode=m,setHook:f=>fetchHook=f,fetchCount:()=>fetchCount,pdfCount:()=>pdfCount,ctx};
 }
 test('every API action fails closed for unauthorized or blank identities',()=>{
   const b=backend();for(const user of ['','outsider@example.com']){b.setUser(user);for(const action of ['bootstrap','create','change','extract','generate','history','report'])assert.equal(b.api({action}).error.code,'UNAUTHORIZED');}
@@ -26,6 +30,13 @@ test('every API action fails closed for unauthorized or blank identities',()=>{
 test('canonical append is idempotent; reused request content cannot collide',()=>{
   const b=backend(),id=crypto.randomUUID(),first=b.create(id),second=b.create(id);assert(first.ok);assert.deepEqual(first,second);assert.equal(b.rows.length,2);
   const wrong=b.api({action:'create',requestId:id,data:{name:'Changed'}});assert.equal(wrong.error.code,'CONFLICT');
+});
+test('client workspace provisioning is revision-safe and creates the standard folders once',()=>{
+  const b=backend(),c=b.create().data,requestId=crypto.randomUUID();
+  const req={action:'provision',id:c.id,expectedRevision:1,requestId};const first=b.api(req),second=b.api(req);
+  assert(first.ok);assert.deepEqual(first,second);assert.equal(first.data.revision,2);assert.match(first.data.workspace.url,/drive\.google\.com\/drive\/folders/);
+  const clientFolder=[...b.rootFolder.children.values()][0];assert.deepEqual([...clientFolder.children.keys()],['01 Intake & Documents','02 Profile Drafts','03 Content Strategy','04 Feedback','05 Final Delivery']);
+  assert.equal(b.rows.length,3);
 });
 test('stale saves rejected; revisions and old snapshots retained',()=>{
   const b=backend(),c=b.create().data;
