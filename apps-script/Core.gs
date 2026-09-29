@@ -55,6 +55,11 @@
     switch(command.type) {
       case 'intake': Object.assign(c,input(p));c.facts=[];c.extracted=false;invalidate(c);break;
       case 'extract': c.facts=validateExtraction(p,c.raw);c.extracted=true;invalidate(c);break;
+      case 'workspace': {
+        const url=text(p.url||'',300,'Workspace folder URL',false);
+        if(url&&!/^https:\/\/drive\.google\.com\/drive\/folders\/[a-zA-Z0-9_-]+$/.test(url))fail('VALIDATION','Invalid workspace folder URL.');
+        c.workspace={url,provisionedAt:text(p.provisionedAt,40,'Provisioned time'),status:'ready'};break;
+      }
       case 'fact': {
         const f=c.facts.find(x=>x.id===p.id);if(!f) fail('NOT_FOUND','Fact not found.');
         if (!['verified','unverified','rejected'].includes(p.status)) fail('VALIDATION','Invalid fact status.');
