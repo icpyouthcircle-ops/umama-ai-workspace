@@ -84,4 +84,4 @@ Run the preview server first. To use installed Edge instead, set `BROWSER_CHANNE
 
 ## Release status
 
-The presentation demo and mocked authenticated backend are tested. Publishing the GitHub portal requires a new Apps Script deployment version with the documented Firebase property and access settings. **Gemini calls and Drive PDF generation still require the server-side Gemini key and live smoke tests.** No real client data was uploaded during development.
+The presentation demo, authenticated GitHub portal, mocked backend and private Google authentication are tested. The Apps Script endpoint is deployed as an owner-run API and rejects unauthenticated requests. **Gemini calls and Drive PDF generation still require the server-side Gemini key and live smoke tests.** No real client data was uploaded during development.
