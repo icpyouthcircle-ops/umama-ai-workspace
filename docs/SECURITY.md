@@ -8,11 +8,11 @@ Public portfolio (separate future repository)
 
 GitHub Pages
   ├─ fictional local demo: browser storage + deterministic templates
-  └─ Google login link → Apps Script /exec
+  └─ private portal: Firebase Google sign-in → authenticated POST
 
-Apps Script /exec
-  ├─ Google OAuth identity + admin allowlist
-  ├─ HTML Service frontend → google.script.run → api()
+Apps Script /exec API
+  ├─ Firebase ID-token verification + admin allowlist
+  ├─ runs as deployment owner; browser receives no Google resource credentials
   ├─ validated state transitions → ClientEvents in private Sheets
   ├─ server-only key → Gemini → schema/source validation → draft
   └─ approved snapshot → HTML/PDF → private Drive folder
@@ -20,12 +20,12 @@ Apps Script /exec
 
 ## Implemented protections
 
-- Google handles authentication; no custom password or browser-held admin secret.
-- Allowlist check before serving the live UI and before every server action, including setup.
-- Missing email or differing active/effective identities are rejected.
-- The manifest defaults to owner-only access, executed as the accessing user.
+- Google/Firebase handles authentication; no custom password or browser-held admin secret.
+- Every GitHub-portal request carries a short-lived ID token that Apps Script verifies before checking the server-side email allowlist.
+- The public Apps Script transport exposes no useful unauthenticated action; all data operations fail closed without a valid allowlisted token.
+- Apps Script executes as the deployment owner so the private Sheet and Drive folders never need to be shared with each administrator.
 - Gemini key in Script Properties and request header only, never frontend output.
-- No anonymous HTTP write endpoint or cross-origin shortcut.
+- The cross-origin POST endpoint accepts `text/plain` to avoid preflight, then validates JSON size, Firebase token, verified email and the allowlist before dispatch.
 - Strict action/module/status allowlists and input-length limits.
 - Source-quotation validation, human fact verification and restricted generation context.
 - Raw intake is treated as untrusted data; only extraction/audit receive it. Writing modules receive verified facts.

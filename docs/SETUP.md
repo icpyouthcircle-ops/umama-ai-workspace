@@ -32,7 +32,7 @@ Use the Google account that will own and operate the workspace (ideally Umama's)
 4. Copy its folder ID from the URL.
 5. Keep both resources restricted to the owner. Check that the folder has no public link or inherited broad sharing.
 
-The app does not change sharing permissions. Report files inherit their folder's access. If adding another trusted admin later, they need explicit access to both resources because the app runs as the accessing user. This is a shared internal workspace, not multi-tenant client isolation.
+The app does not change sharing permissions. Report files inherit their folder's access. The backend runs as the deployment owner, so administrators use the application without receiving direct Sheet or Drive access. This is a shared internal workspace, not multi-tenant client isolation.
 
 ## 4. Create the Apps Script project
 
@@ -56,6 +56,7 @@ The app does not change sharing permissions. Report files inherit their folder's
    | `SPREADSHEET_ID` | ID of the private spreadsheet |
    | `REPORT_FOLDER_ID` | ID of the private report folder |
    | `CLIENT_FOLDER_ROOT_ID` | Optional dedicated client-workspace root; falls back to `REPORT_FOLDER_ID` |
+   | `FIREBASE_CONFIG` | One-line JSON containing the public Firebase web `apiKey`, `authDomain`, `projectId` and `appId` used by `frontend/config.js` |
    | `GEMINI_API_KEY` | Key created in Google AI Studio for your account/project |
    | `GEMINI_MODEL` | An available Gemini model supporting `generateContent` and JSON-schema structured output; verify access in your own project |
    | `AI_DAILY_LIMIT` | Optional daily per-admin request cap; default `50`, maximum `500`, UTC reset |
@@ -66,37 +67,39 @@ No fixed model is hardcoded: availability and compatibility can change. The adap
 7. Review Google's authorization request and grant the scopes needed for your own Sheet, Drive, account email and external Gemini requests.
 8. Confirm that the spreadsheet contains a `ClientEvents` tab with nine headers. Running setup again preserves data.
 
-The manifest includes broad Sheets and Drive scopes because this MVP uses `SpreadsheetApp` and `DriveApp`. Use a dedicated operating account with appropriately limited access and only trusted script editors. External OAuth distribution can require additional Google configuration or verification; this MVP is intended for the owner, not general public sign-up.
+The manifest includes broad Sheets and Drive scopes because the owner-run backend uses `SpreadsheetApp` and `DriveApp`. Use a dedicated operating account with appropriately limited access and only trusted script editors. Portal users receive no direct Google-resource credentials.
 
 ## 5. Deploy securely
 
-1. Choose **Deploy → New deployment → Web app**.
-2. Set **Execute as: User accessing the web app**.
-3. For the single-owner MVP, choose **Only myself** for access. If you later need multiple internal admins, choose the most restrictive authenticated Google-account/domain option your account offers and keep the server allowlist enabled.
-4. Never choose anonymous/public unauthenticated access. Do not switch to **Execute as me** as a shortcut for login problems.
-5. Deploy and copy the `/exec` URL. Use the deployed version, not the editor's `/dev` test URL, for the presentation.
-6. Sign in as the allowlisted operating user and verify access. If Google does not provide the active email, the application deliberately denies access.
-7. Confirm an unauthorized account cannot view the interface or call API actions.
+1. In Firebase Authentication, enable the Google provider and add `icpyouthcircle-ops.github.io` as an authorized domain. The checked-in configuration uses the dedicated **Umama AI Workspace** Firebase project (`woven-proton-510204-v1`).
+2. Choose **Deploy → New deployment → Web app**.
+3. Set **Execute as: Me** so the private Sheet, Drive folders and Gemini key remain owned by the deployment account.
+4. Set **Who has access: Anyone**. This makes the API transport reachable; it does not grant data access. Every action still requires a valid Firebase token, verified email and `ADMIN_EMAILS` match.
+5. Deploy and copy the `/exec` URL. Use the deployed version, never `/dev`.
+6. Confirm the URL in `frontend/config.js` and `FIREBASE_CONFIG` in Script Properties describe the same Firebase project.
+7. Test an allowlisted account and a non-allowlisted account. The latter must receive `UNAUTHORIZED` and no records.
 
-Google performs sign-in and authorization before serving the private workspace. The server checks active/effective identity and the allowlist on every entry point. **Lock workspace** clears the visible UI only; it does not sign out of Google. Close the tab and sign out of Google separately on shared devices.
+The GitHub portal uses Firebase Google sign-in. **Lock workspace** signs out of the portal's browser session. It does not change the user's wider Google or Chrome session.
 
-## 6. Connect the public demo's login button
+## 6. Connect the GitHub-hosted private portal
 
-In `frontend/config.js`, set only the public URL:
+In `frontend/config.js`, set the public portal path, Apps Script API URL and Firebase web identifiers:
 
 ```js
 window.WORKSPACE_CONFIG = Object.freeze({
-  liveWorkspaceUrl: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec'
+  portalUrl: 'portal.html',
+  apiUrl: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
+  firebase: Object.freeze({apiKey:'...',authDomain:'...',projectId:'...',appId:'...'})
 });
 ```
 
-Build again and redeploy GitHub Pages. A deployment URL is not a secret and grants no access by itself. The button opens the Google-hosted private app; the static demo never stores a bearer token or invokes a cross-origin write endpoint.
+Build again and redeploy GitHub Pages. Firebase web configuration and the Apps Script URL are public identifiers, not server secrets. The browser holds only a short-lived sign-in token. Keep Gemini keys, storage IDs and private operational settings in Apps Script properties.
 
 ## 7. Live smoke test before using real data
 
 Use fictional data until every check passes:
 
-- Owner Google sign-in succeeds; a non-allowlisted identity fails.
+- Allowlisted Google sign-in at `/portal.html` succeeds; a non-allowlisted identity fails.
 - New client persists in the private Sheet and survives reload.
 - Live Gemini extraction produces traceable quotations and unverified facts.
 - Missing or invalid API configuration leaves saved work unchanged.
@@ -116,7 +119,7 @@ Edit source files, run tests and build, then copy updated `Code.gs`, `Core.gs`, 
 
 | Message | Action |
 | --- | --- |
-| Access denied/unavailable | Check signed-in account, admin email, execute-as-user deployment and resource permissions. Blank identity fails closed. |
+| Access denied/unavailable | Check Firebase Google sign-in, `ADMIN_EMAILS`, matching Firebase configuration and token verification. |
 | Workspace storage not configured | Set script properties and run `setupWorkspace`. |
 | Gemini could not complete request | Check model access, structured-output compatibility, billing/quota and key restrictions. |
 | Extracted quotation not found | AI output did not match source text; retry or clarify intake. It was not saved. |

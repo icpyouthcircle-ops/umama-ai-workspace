@@ -1,6 +1,6 @@
 # Apps Script endpoints
 
-This app uses Apps Script HTML Service RPC, not public REST. There is no `doPost`, API-key-bearing browser fetch, CORS bypass, JSONP or `no-cors` write path.
+The GitHub portal calls `doPost` with the existing request fields plus a short-lived Firebase `idToken`. Apps Script verifies the token with Google, removes it, checks the server-side allowlist and then dispatches the action. The legacy same-origin interface can still call the same handler through `api(request)`.
 
 ## Entry points
 
@@ -8,6 +8,7 @@ This app uses Apps Script HTML Service RPC, not public REST. There is no `doPost
 | --- | --- | --- |
 | `doGet()` | Google-hosted `/exec` page | Identity + allowlist before HTML is served |
 | `api(request)` | `google.script.run` from hosted UI | Identity + allowlist on every action |
+| `doPost(e)` | GitHub Pages private portal | Firebase token verification + server allowlist on every request |
 | `setupWorkspace()` | Owner in script editor | Identity + allowlist; idempotent schema setup |
 
 All helper functions end in `_`, making them private to Apps Script RPC. `WorkspaceCore` is a shared object containing validation and state transitions; it exposes no callable top-level storage helpers.
