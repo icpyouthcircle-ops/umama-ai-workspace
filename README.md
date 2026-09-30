@@ -84,4 +84,4 @@ Run the preview server first. To use installed Edge instead, set `BROWSER_CHANNE
 
 ## Release status
 
-The presentation demo, authenticated GitHub portal, mocked backend and private Google authentication are tested. The Apps Script endpoint is deployed as an owner-run API and rejects unauthenticated requests. **Gemini calls and Drive PDF generation still require the server-side Gemini key and live smoke tests.** No real client data was uploaded during development.
+The presentation demo and mocked backend are tested. The GitHub portal, Firebase sign-in configuration and owner-run Apps Script API are deployed, and the API rejects unauthenticated requests. **Complete allowlisted sign-in must still be smoke-tested in Chrome or Edge; Gemini calls and Drive PDF generation require the server-side Gemini key and live smoke tests.** No real client data was uploaded during development.
