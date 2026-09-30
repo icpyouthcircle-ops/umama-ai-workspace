@@ -63,13 +63,13 @@
   async function start(){await busy(async()=>{try{const data=await request('bootstrap');Object.assign(state,data,{page:'dashboard',dirty:false});render();}catch(err){state.page='settings';state.clients=[];state.dirty=false;render();throw err;}});}
   document.addEventListener('click',ev=>{const b=ev.target.closest('[data-action]');if(!b||b.disabled)return;const a=b.dataset.action;const nav=['nav','new','open','tab','module','logout','reload'];if(nav.includes(a)&&!confirmLeave())return;if(nav.includes(a))state.dirty=false;
     if(a==='enter-demo'){sessionStorage.setItem('umama-demo-open','1');start();}
-    else if(a==='live-login'){const url=window.WORKSPACE_CONFIG?.liveWorkspaceUrl;if(/^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec$/.test(url||''))window.open(url,'_blank','noopener,noreferrer');else modal('<h2>Connect your private workspace</h2><p class="muted">The live workspace has not been configured. Follow docs/SETUP.md in the project, deploy Apps Script with Google sign-in, then add its URL to frontend/config.js.</p><div class="actions">'+button('Close','close')+'</div>');}
+    else if(a==='live-login'){const url=window.WORKSPACE_CONFIG?.portalUrl;if(typeof url==='string'&&/^(?:https:\/\/icpyouthcircle-ops\.github\.io\/umama-ai-workspace\/)?portal\.html$/.test(url))location.href=url;else modal('<h2>Connect your private workspace</h2><p class="muted">The GitHub-hosted private portal has not been configured.</p><div class="actions">'+button('Close','close')+'</div>');}
     else if(a==='nav'){state.page=b.dataset.page;state.query='';state.filter='all';render();}
     else if(a==='new'){state.page='new';render();}
     else if(a==='open'){state.clientId=b.dataset.id;state.tab=state.page==='reports'?'report':state.page==='production'?'studio':'intelligence';state.page='client';state.history=[];render();}
     else if(a==='tab'){state.tab=b.dataset.tab;render();if(state.tab==='history')busy(async()=>{state.history=await request('history',{id:current().id});render();});}
     else if(a==='module'){state.module=b.dataset.module;render();}
-    else if(a==='logout'){state.clients=[];sessionStorage.removeItem('umama-demo-open');if(LIVE){$('#app').innerHTML='<div class="boot"><h1>Workspace locked</h1><p>Close this tab to leave. Reload to authenticate with Google again.</p><p class="small muted">This does not sign you out of your Google account.</p></div>';}else login();}
+    else if(a==='logout'){state.clients=[];sessionStorage.removeItem('umama-demo-open');if(LIVE&&window.UMAMA_REMOTE_AUTH){$('#app').innerHTML='<div class="boot">Signing out…</div>';window.UMAMA_REMOTE_AUTH.signOut().finally(()=>location.reload());}else if(LIVE){$('#app').innerHTML='<div class="boot"><h1>Workspace locked</h1><p>Close this tab to leave. Reload to authenticate with Google again.</p><p class="small muted">This does not sign you out of your Google account.</p></div>';}else login();}
     else if(a==='sample'){$('#raw').value=WorkspaceSamples.raw;state.dirty=true;}
     else if(a==='reload')start();
     else if(a==='close')$('#modal').close();
