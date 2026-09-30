@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..'),src=path.join(root,'frontend'),dist=path.join(root,'dist');
 fs.mkdirSync(dist,{recursive:true});
-for(const name of ['index.html','styles.css','config.js','core.js','sample.js','app.js'])fs.copyFileSync(path.join(src,name),path.join(dist,name));
+for(const name of ['index.html','portal.html','styles.css','config.js','core.js','sample.js','app.js','remote.js'])fs.copyFileSync(path.join(src,name),path.join(dist,name));
 fs.writeFileSync(path.join(dist,'.nojekyll'),'');
 let html=fs.readFileSync(path.join(src,'index.html'),'utf8');
 const safeScript=s=>s.replace(/<\/script/gi,'<\\/script');
