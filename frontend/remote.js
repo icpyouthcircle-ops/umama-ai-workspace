@@ -13,7 +13,7 @@ function validateConfig(){
 }
 
 validateConfig();
-const [{initializeApp},{getAuth,GoogleAuthProvider,signInWithPopup,signOut,setPersistence,browserSessionPersistence,onAuthStateChanged}]=await Promise.all([
+const [{initializeApp},{getAuth,GoogleAuthProvider,signInWithRedirect,signOut,setPersistence,browserSessionPersistence,onAuthStateChanged}]=await Promise.all([
   import('https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js'),
   import('https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js')
 ]);
@@ -48,5 +48,5 @@ function installBridge(user){
 let started=false;
 onAuthStateChanged(auth,user=>{
   if(user&&!started){started=true;installBridge(user);return;}
-  if(!user){started=false;login();const button=document.getElementById('remote-sign-in');button.onclick=async()=>{button.disabled=true;try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(error){login(error.code==='auth/popup-closed-by-user'?'Google sign-in was closed. Please try again.':'Google sign-in could not be completed. Check the account and try again.');}};}
+  if(!user){started=false;login();const button=document.getElementById('remote-sign-in');button.onclick=async()=>{button.disabled=true;try{const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:'select_account'});await signInWithRedirect(auth,provider);}catch{login('Google sign-in could not be completed. Check the account and try again.');}};}
 });
