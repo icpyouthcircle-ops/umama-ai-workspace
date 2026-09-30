@@ -28,23 +28,24 @@ The demo includes three fictional clients. It saves edits in this browser, recog
 - Immutable saved client revisions, history, stale-edit protection and approval invalidation.
 - Quality gates, conflicting verified-fact checks and mandatory human attestation.
 - Marked draft HTML reports; approved final HTML in demo and private Drive PDF in live mode.
-- Google-authenticated Apps Script server, admin allowlist, server-side Gemini integration, rate budget, input validation and private Sheets/Drive persistence.
+- GitHub-hosted private portal with Firebase Google sign-in, Apps Script token verification, admin allowlist, server-side Gemini integration, rate budget, input validation and private Sheets/Drive persistence.
 - GitHub Pages workflow, generated Apps Script frontend and server files, setup, schema, endpoint and presentation documentation.
 
 ## Deployment boundaries
 
 | Surface | Purpose | Data and access |
 | --- | --- | --- |
-| GitHub Pages | Public presentation demo | Fictional browser-local records; no keys, login security or real client data |
-| Apps Script web app | Private live workspace | Google sign-in + server allowlist; private Sheet and Drive folder |
+| GitHub Pages `/` | Public presentation demo | Fictional browser-local records; no Gemini key or real client data |
+| GitHub Pages `/portal.html` | Private live workspace | Firebase Google sign-in + server allowlist; private Sheet and Drive folder |
+| Apps Script web app | Private backend API | Token verification, Sheets/Drive operations and server-only Gemini calls |
 | Public portfolio | Separate future project | Separate repository/deployment; no client records or shared demo storage |
 
-Live UI and server communicate through `google.script.run`. The GitHub Pages login button opens the configured Apps Script URL. There is no direct cross-origin browser API connection, custom password database, public writable Sheet, shared admin password or frontend Gemini key. Client folders use `CLIENT_FOLDER_ROOT_ID` when configured and otherwise use the private `REPORT_FOLDER_ID` folder.
+The GitHub portal sends a short-lived Firebase ID token with every request. Apps Script verifies the token with Google, checks the server-side email allowlist, and then performs the request as the deployment owner. There is no custom password database, public writable Sheet, shared admin password or frontend Gemini key. Client folders use `CLIENT_FOLDER_ROOT_ID` when configured and otherwise use the private `REPORT_FOLDER_ID` folder.
 
 ## Project layout
 
 ```text
-frontend/           Static interface, shared domain rules, demo fixtures
+frontend/           Demo, authenticated portal, shared domain rules and fixtures
 apps-script/        Code.gs, manifest; generated Core.gs and Index.html
 scripts/            Dependency-free preview and build
 tests/              Core, mocked-server and optional browser regression suite
@@ -83,4 +84,4 @@ Run the preview server first. To use installed Edge instead, set `BROWSER_CHANNE
 
 ## Release status
 
-The presentation demo, mocked backend and private Google authentication are tested. The private Apps Script deployment and version-safe `ClientEvents` sheet are configured for the authorized administrator. **Gemini calls and Drive PDF generation still require the server-side Gemini key and live smoke tests.** No real client data was uploaded during development. Production-minded means defensive implementation and explicit validation boundaries; it does not mean zero defects or production certification.
+The presentation demo and mocked authenticated backend are tested. Publishing the GitHub portal requires a new Apps Script deployment version with the documented Firebase property and access settings. **Gemini calls and Drive PDF generation still require the server-side Gemini key and live smoke tests.** No real client data was uploaded during development.
