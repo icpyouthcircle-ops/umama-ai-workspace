@@ -1,4 +1,4 @@
-/* Public callable surface: doGet, api, setupWorkspace. All helpers end in _. */
+/* Public callable surface: doGet, doPost, api, setupWorkspace. All helpers end in _. */
 function doGet() {
   try {
     authorize_();
@@ -17,8 +17,46 @@ function authorize_() {
 }
 
 function api(request) {
+  try {return apiAs_(request,authorize_());}
+  catch(err) {return apiError_(err);}
+}
+
+function doPost(e) {
   try {
-    const actor = authorize_();
+    const raw=String(e&&e.postData&&e.postData.contents||'');
+    if(!raw||raw.length>30000)WorkspaceCore.fail('VALIDATION','Invalid or oversized request.');
+    const request=JSON.parse(raw),token=request.idToken;delete request.idToken;
+    return jsonOutput_(apiAs_(request,remoteAuthorize_(token)));
+  } catch(err) {return jsonOutput_(apiError_(err));}
+}
+
+function allowedEmails_() {
+  return (props_().getProperty('ADMIN_EMAILS')||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+}
+
+function remoteAuthorize_(token) {
+  const value=String(token||'');
+  if(value.length<100||value.length>12000)WorkspaceCore.fail('UNAUTHORIZED','Sign in with an authorized Google account.');
+  let config;try{config=JSON.parse(props_().getProperty('FIREBASE_CONFIG')||'{}');}catch{config={};}
+  if(!config.apiKey||!config.projectId)WorkspaceCore.fail('CONFIG','GitHub portal authentication is not configured.');
+  const response=UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+encodeURIComponent(config.apiKey),{
+    method:'post',contentType:'application/json',payload:JSON.stringify({idToken:value}),muteHttpExceptions:true
+  });
+  if(response.getResponseCode()!==200)WorkspaceCore.fail('UNAUTHORIZED','Google sign-in expired. Sign in again.');
+  let data,claims;try{data=JSON.parse(response.getContentText());claims=JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(value.split('.')[1])).getDataAsString());}catch{WorkspaceCore.fail('UNAUTHORIZED','Google sign-in could not be verified.');}
+  const user=data.users&&data.users[0],email=String(user&&user.email||'').trim().toLowerCase(),now=Math.floor(Date.now()/1000);
+  if(!user||user.emailVerified!==true||claims.aud!==config.projectId||claims.iss!=='https://securetoken.google.com/'+config.projectId||Number(claims.exp)<=now||!allowedEmails_().includes(email))WorkspaceCore.fail('UNAUTHORIZED','Access denied. Use an authorized Google account.');
+  return email;
+}
+
+function jsonOutput_(value) {return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON);}
+function apiError_(err) {
+  const codes=['UNAUTHORIZED','VALIDATION','NOT_FOUND','CONFLICT','CONSENT','QUALITY','CAPACITY','CONFIG','BUSY','RATE_LIMIT','AI_FORMAT','AI_SOURCE','AI_UNAVAILABLE'];
+  return {ok:false,error:{code:codes.includes(err.code)?err.code:'INTERNAL',message:codes.includes(err.code)?err.message:'The operation could not be completed. Reload to check the saved state, then ask your workspace administrator to verify configuration and permissions.'}};
+}
+
+function apiAs_(request,actor) {
+  try {
     if (!request || typeof request !== 'object' || JSON.stringify(request).length > 25000) WorkspaceCore.fail('VALIDATION','Invalid or oversized request.');
     if (!['bootstrap','create','provision','change','extract','generate','history','report'].includes(request.action)) WorkspaceCore.fail('VALIDATION','Unknown action.');
     if (request.action === 'bootstrap') {
@@ -66,8 +104,7 @@ function api(request) {
     return {ok:true,data:commit_(request,actor,digest,command)};
   } catch(err) {
     // Never send provider responses, keys, raw intake, stack traces or storage IDs to the browser.
-    const codes=['UNAUTHORIZED','VALIDATION','NOT_FOUND','CONFLICT','CONSENT','QUALITY','CAPACITY','CONFIG','BUSY','RATE_LIMIT','AI_FORMAT','AI_SOURCE','AI_UNAVAILABLE'];
-    return {ok:false,error:{code:codes.includes(err.code)?err.code:'INTERNAL',message:codes.includes(err.code)?err.message:'The operation could not be completed. Reload to check the saved state, then ask your workspace administrator to verify configuration and permissions.'}};
+    return apiError_(err);
   }
 }
 

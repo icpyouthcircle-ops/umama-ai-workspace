@@ -9,5 +9,5 @@
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/script.external_request"
   ],
-  "webapp": { "access": "MYSELF", "executeAs": "USER_ACCESSING" }
+  "webapp": { "access": "ANYONE_ANONYMOUS", "executeAs": "USER_DEPLOYING" }
 }
